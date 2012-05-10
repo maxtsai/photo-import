@@ -117,7 +117,7 @@ static int copy_file(char *src, char *dest)
 
 	//printf("cmd: %s\n", cmd);
 	if ((fp = popen(cmd, "r")) == NULL) {
-		perror("popen");
+		perror("copy_file: popen");
 		return -EFAULT;
 	}
 	pclose(fp);
@@ -137,7 +137,7 @@ static u_int32_t get_checksum(char *filename)
 	memset(cmd, 0, sizeof(cmd));
 	sprintf(cmd, "md5sum %s 2>/dev/null", filename);
 	if ((fp = popen(cmd, "r")) == NULL) {
-		perror("popen");
+		perror("get_checksum: popen");
 		return -EFAULT;
 	}
 	memset(buf, 0, sizeof(buf));
@@ -165,7 +165,7 @@ int get_value_by_ids(int ids, char *value, char *filename)
 	memset(cmd, 0, sizeof(cmd));
 	sprintf(cmd, "exif -t 0x%x %s 2>/dev/null", ids, filename);
 	if ((fp = popen(cmd, "r")) == NULL) {
-		perror("popen");
+		perror("get_value_by_ids: popen");
 		return -EFAULT;
 	}
 	while(getline(&line, &len, fp) != -1) {
@@ -229,7 +229,7 @@ int is_jpeg(char *filename)
 	memset(cmd, 0, sizeof(cmd));
 	sprintf(cmd, "exif %s 2>/dev/null", filename);
 	if ((fp = popen(cmd, "r")) == NULL) {
-		perror("popen");
+		perror("is_jpeg: popen");
 		goto not_jpg;
 	}
 	getline(&line, &len, fp);
@@ -296,7 +296,7 @@ void *theThread(void *parm)
 	strncpy(jfp->datetime, tmp, 20);
 	format_time2filename(jfp->datetime, 20);
 #endif
-	printf("%s, %s\n", jfp->filename, jfp->datetime);
+	//printf("%s, %s\n", jfp->filename, jfp->datetime);
 
 	rc = pthread_mutex_lock(&mutex);
 	list_add(&jfp->list, pds->list);
@@ -455,7 +455,5 @@ void main(int argc, char **argv)
 		}
 	}
 	system("date");
-
-
 }
 
