@@ -1,5 +1,5 @@
-#ifndef __LIST_H__
-#define __LIST_H__
+#ifndef _LIST_H_
+#define _LIST_H_
 
 #define container_of(ptr, type, member) ({                      \
         const typeof( ((type *)0)->member ) *__mptr = (ptr);    \

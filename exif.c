@@ -15,6 +15,9 @@
 
 #include "list.h"
 
+#define NAME_MAX 255
+#define PATH_MAX 1024
+
 #define SOI	0xffd8
 #define EOI	0xffd9
 
