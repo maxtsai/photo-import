@@ -1,19 +1,18 @@
 #ifndef _LIST_H_
 #define _LIST_H_
 
+/*
 #define container_of(ptr, type, member) ({                      \
         const typeof( ((type *)0)->member ) *__mptr = (ptr);    \
         (type *)( (char *)__mptr - offsetof(type,member) );})
+*/
 
+#define container_of_first_member(ptr, type, member) ({ \
+		(type *) ( (char *) ptr) ;})
 
 struct list_head {
 	struct list_head *next, *prev;
 };
-
-#define LIST_HEAD_INIT(name) { &(name), &(name) }
-
-#define LIST_HEAD(name) \
-	struct list_head name = LIST_HEAD_INIT(name)
 
 static inline void INIT_LIST_HEAD(struct list_head *list)
 {
@@ -64,9 +63,17 @@ static inline int list_empty(const struct list_head *head)
 	return head->next == head;
 }
 
-#define list_entry(ptr, type, member) \
-	container_of(ptr, type, member)
 
+#define list_entry(ptr, type, member) \
+	container_of_first_member(ptr, type, member)
+
+#define list_for_each_entry_safe(pos, n, type, head, member)		\
+	for (pos = list_entry((head)->next, type, member),		\
+		n = list_entry(pos->member.next, type, member);		\
+		&pos->member != (head);					\
+		pos = n, n = list_entry(n->member.next, type, member))
+
+/*
 #define list_for_each(pos, head) \
 	for (pos = (head)->next; pos != (head); pos = pos->next)
 
@@ -80,9 +87,9 @@ static inline int list_empty(const struct list_head *head)
 	     pos = list_entry(pos->member.next, typeof(*pos), member))
 
 #define list_for_each_entry_safe(pos, n, head, member)			\
-	for (pos = list_entry((head)->next, typeof(*pos), member),	\
-		n = list_entry(pos->member.next, typeof(*pos), member);	\
+	for (pos = list_entry((head)->next, _typeof_(*pos), member),	\
+		n = list_entry(pos->member.next, _typeof_(*pos), member);	\
 	     &pos->member != (head); 					\
-	     pos = n, n = list_entry(n->member.next, typeof(*n), member))
-
+	     pos = n, n = list_entry(n->member.next, _typeof_(*n), member))
+*/
 #endif

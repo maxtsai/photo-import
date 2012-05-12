@@ -6,9 +6,11 @@
 #include "core_ops.h"
 
 static _Bool jpeg_check(struct file_format*, char *);
+static _Bool jpeg_scan(struct file_format*, char *, struct list_head *);
 
 struct format_operation jpeg_fops = {
 	.check	= jpeg_check,
+	.scan	= jpeg_scan,
 };
 
 struct file_format jpeg_format = {
@@ -17,12 +19,13 @@ struct file_format jpeg_format = {
 	.fops			= &jpeg_fops,
 };
 
-static inline void byte_swap(char *ptr, int len)
+static void byte_swap(char *ptr, int len)
 {                               
 	char tmp;
+	int i;
 	assert(ptr);
 	assert((len>0) || (len%2 == 0));
-	for (int i = 0; i < len-1; i+=2) {
+	for (i = 0; i < len-1; i+=2) {
 		tmp = ptr[i];
 		ptr[i] = ptr[i+1];
 		ptr[i+1] = tmp;
@@ -32,15 +35,17 @@ static inline void byte_swap(char *ptr, int len)
 #define TIFF_HEADER_OFF		12
 #define EOI			0xffd9
 #define SOI			0xffd8
-static _Bool jpeg_check(struct file_format* format, char *filename)
+static _Bool jpeg_check(struct file_format* format, char *fname)
 {
         FILE *fp;
         char maker;
         int ret;
         unsigned short endian;
 
-	assert(filename);
-        if ((fp = fopen(filename, "r")) == NULL) {
+	assert(format);
+	assert(fname);
+
+        if ((fp = fopen(fname, "r")) == NULL) {
                 perror("fopen");
 		return false;
         }
@@ -64,6 +69,20 @@ static _Bool jpeg_check(struct file_format* format, char *filename)
 fault:
         fclose(fp);
         return false;
+}
+
+static _Bool jpeg_scan(struct file_format *format, char *path, struct list_head *result)
+{
+	assert(format);
+	assert(result);
+
+	/*
+	struct file_info *finfo = malloc(sizeof(struct file_info));
+	memset(finfo, 0, sizeof(struct file_info));
+	*/
+
+	printf("[%s:%d] under construction (list = %p)\n", __FUNCTION__, __LINE__, result);
+	return true;
 }
 
 _Bool jpeg_init()

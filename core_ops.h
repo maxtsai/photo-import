@@ -6,6 +6,6 @@
 _Bool register_format(struct file_format *format);
 
 void prepare_core();
-_Bool scan();
+_Bool scan(char *path, struct list_head *list);
 
 #endif

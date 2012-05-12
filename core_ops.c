@@ -4,31 +4,44 @@
 #include <assert.h>
 
 #include "core_ops.h"
-
-static struct list_head formats;
+struct list_head format_head;
+_Bool core_is_ready = false;
 
 _Bool register_format(struct file_format *format)
 {
 	assert(format);
 	if (format->name == NULL || format->fops == NULL)
 		return false;
-	list_add(&format->head, &formats);
+	list_add(&format->head, &format_head);
 	return true;
 }
 
 void prepare_core()
 {
-	INIT_LIST_HEAD(&formats);
+	INIT_LIST_HEAD(&format_head);
+	core_is_ready = true;
 }
 
-_Bool scan()
+_Bool scan(char *path, struct list_head *list)
 {
 	struct file_format *entry, *next;
+	_Bool ret;
 
-	if (list_empty(&formats)) {
-		printf("Can't handle any format!\n");
+	assert(path);
+	assert(list);
+
+	if (core_is_ready == false || list_empty(&format_head)) {
+		printf("Not any format supported!\n");
 		return false;
 	}
-	list_for_each_entry_safe(entry, next, &formats, head) {
+	list_for_each_entry_safe(entry, next, struct file_format, &format_head, head) {
+		if (entry->fops->scan)
+			ret = entry->fops->scan(entry, path, list);
+		if (ret == false) {
+			printf("Scan for %s format error!\n", entry->name);
+			return false;
+		}
 	}
+	return true;
 }
+
