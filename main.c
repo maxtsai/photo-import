@@ -8,7 +8,7 @@
 
 #include "core_ops.h"
 
-#define DEBUG 0
+#define DEBUG 1
 #if DEBUG
 #define dprintf printf
 #else
@@ -144,6 +144,8 @@ int main(int argc, char **argv)
 			if (check_format(entry->path, &entry->file_head) == false)
 				printf("some error during check format type\n");
 			if (save(entry->path, &entry->file_head) == false)
+				goto fault;
+			if (load(entry->path, &entry->file_head) == false)
 				goto fault;
 		}
 	}

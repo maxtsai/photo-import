@@ -84,9 +84,39 @@ _Bool save(char *path, struct list_head *file_head)
 	return true;
 }
 
-_Bool load()
+_Bool load(char *path, struct list_head *file_head)
 {
+	struct file_info *fentry, *fnext;
+	char fname[MAX_PATH];
+	FILE *fp;
 
+	strncpy(fname, path, MAX_PATH);
+	strcat(fname, "/");
+	strcat(fname, RECORD_FILE);
+
+	list_for_each_entry_safe(fentry, fnext, struct file_info, file_head, head) {
+		list_del(&fentry->head);
+		free(fentry);
+	}
+
+	fp = fopen(fname, "r");
+	if (!fp) {
+		printf("unable to open '%s' (%s)", fname, strerror(errno));
+		return false;
+	}
+
+	while(!feof(fp)) {
+		struct file_info *fi = malloc(sizeof(struct file_info));
+		errno = 0;
+		fi->copied_fname[0] = '\0';
+		fi->duplicated = false;
+		fscanf(fp, "%s\t%s\n", &fi->format, &fi->name);
+		if (errno)
+			printf("load error (%s)\n", strerror(errno));
+		list_add_tail(&fi->head, file_head);
+	}
+
+	fclose(fp);
 	return true;
 }
 
