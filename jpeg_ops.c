@@ -4,13 +4,12 @@
 #include <assert.h>
 
 #include "core_ops.h"
+#include "os_api.h"
 
 static _Bool jpeg_check(struct file_format*, char *);
-static _Bool jpeg_scan(struct file_format*, char *, struct list_head *);
 
 struct format_operation jpeg_fops = {
 	.check	= jpeg_check,
-	.scan	= jpeg_scan,
 };
 
 struct file_format jpeg_format = {
@@ -38,7 +37,7 @@ static void byte_swap(char *ptr, int len)
 static _Bool jpeg_check(struct file_format* format, char *fname)
 {
         FILE *fp;
-        char maker;
+        unsigned short maker;
         int ret;
         unsigned short endian;
 
@@ -55,13 +54,13 @@ static _Bool jpeg_check(struct file_format* format, char *fname)
         fseek(fp, 0, SEEK_SET);
         if (fread((void*) &maker, 1, sizeof(maker), fp) != 2)
 		goto fault;
-        byte_swap(&maker, sizeof(maker));
+        byte_swap((char*) &maker, sizeof(maker));
         if (maker != SOI)
 		goto fault;
         fseek(fp, -2, SEEK_END);
         if (fread((void*) &maker, 1, sizeof(maker), fp) != 2)
 		goto fault;
-        byte_swap(&maker, sizeof(maker));
+        byte_swap((char*) &maker, sizeof(maker));
         if (maker != EOI)
 		goto fault;
         fclose(fp);
@@ -69,20 +68,6 @@ static _Bool jpeg_check(struct file_format* format, char *fname)
 fault:
         fclose(fp);
         return false;
-}
-
-static _Bool jpeg_scan(struct file_format *format, char *path, struct list_head *result)
-{
-	assert(format);
-	assert(result);
-
-	/*
-	struct file_info *finfo = malloc(sizeof(struct file_info));
-	memset(finfo, 0, sizeof(struct file_info));
-	*/
-
-	printf("[%s:%d] under construction (list = %p)\n", __FUNCTION__, __LINE__, result);
-	return true;
 }
 
 _Bool jpeg_init()

@@ -8,20 +8,28 @@
 
 #include "core_ops.h"
 
+#define DEBUG
+#if DEBUG
+#define dprintf printf
+#else
+#define dprintf
+#endif
+
 /* supported format */
 extern _Bool jpeg_init() __attribute__((weak));
 extern _Bool mov_init() __attribute__((weak));
 extern _Bool avi_init() __attribute__((weak));
 
-static _Bool SCAN_ONLY;
+/* options */
+static _Bool scan_only;
 static int job_num;
 
-#define MAX_PATH 1024
 struct _folder_list {
 	struct list_head head;
 	struct list_head file_head;
 	char path[MAX_PATH];
 };
+LIST_HEAD(folder_head);
 
 _Bool prepare()
 {
@@ -47,7 +55,7 @@ _Bool prepare()
 	return true;
 }
 
-void usage()
+static void usage()
 {
 	printf("Usage: import [-s | -jn]... SOURCE... DIRECTORY\n"
 			"import media files from SOURCE to DEST, or multiple SOURCE(s) to DIRECTORY\n\n"
@@ -55,23 +63,25 @@ void usage()
 			"-jn		n means the number of jobs running simultaneously, n >= 1\n"
 			"\n");
 }
-
-int main(int argc, char **argv)
+static void arg_parser(int argc, char **argv)
 {
 	int i;
-
-	SCAN_ONLY = false;
+	scan_only = false;
 	job_num = 1;
+	int count = 0;
 
-	if (argc < 3) { usage(); return 0; }
+	if (argc < 3) { usage(); exit(1); }
 	if (argc > 3) {
 		char *endptr;
 		for (i = 0; i < argc; i++) {
 			if (argv[i][0] == '-') {
-				if (argv[i][1] == 's' || argv[i][1] == 'S')
-					SCAN_ONLY = true;
+				if (argv[i][1] == 's' || argv[i][1] == 'S') {
+					scan_only = true;
+					count++;
+				}
 				if (argv[i][1] == 'j' || argv[i][1] == 'J') {
 					errno = 0;
+					count++;
 					job_num = strtol(&argv[i][2], &endptr, 10);
 					if ((errno == ERANGE && (job_num == LONG_MAX || job_num == LONG_MIN))
 							|| (errno != 0 && job_num == 0)
@@ -79,28 +89,66 @@ int main(int argc, char **argv)
 							|| (job_num > 32)
 							|| (&argv[i][2] == endptr)) {
 						printf("-j with invalid number, suggest -j4?\n");
-						return 0;
+						exit(1);
 					}
-
+					printf("multi-jobs is not supported yet.\n");
 				}
 			}
 		}
+		if (argc - count < 2) {
+			usage();
+			exit(1);
+		}
 	}
-	return 0;
+
+	for (i = count + 1; i < argc; i++) {
+		struct _folder_list *fl = malloc(sizeof(struct _folder_list));
+		INIT_LIST_HEAD(&fl->file_head);
+		strncpy(fl->path, argv[i], MAX_PATH);
+		list_add_tail(&fl->head, &folder_head);
+	}
 }
 
+static void cleanup()
+{
+	struct _folder_list *entry, *next;	
+	list_for_each_entry_safe(entry, next, struct _folder_list, &folder_head, head) {
+		dprintf("\t'%s'\n", entry->path);
+		if (!list_empty(&entry->file_head)) {
+			struct file_info *fentry, *fnext;
+			list_for_each_entry_safe(fentry, fnext, struct file_info, &entry->file_head, head) {
+				dprintf("\t\t'%s'\t\t%s\n", fentry->name, fentry->format);
+				list_del(&fentry->head);
+				free(fentry);
+			}
+		}
+		list_del(&entry->head);
+		free(entry);
+	}
+}
 
+int main(int argc, char **argv)
+{
+	arg_parser(argc, argv);
 
+	if (prepare() == false)
+		exit(1);
 
+	if (scan_only) {
+		struct _folder_list *entry, *next;	
+		list_for_each_entry_safe(entry, next, struct _folder_list, &folder_head, head) {
+			dprintf("scan '%s'\n", entry->path);
+			if (scan_dir(entry->path, &entry->file_head) == false) {
+				goto fault;
+			}
+			if (check_format(entry->path, &entry->file_head) == false)
+				printf("some error during check format type\n");
+		}
+	}
 
-
-
-
-
-
-
-
-
-
+fault:
+	cleanup();
+	return 0;
+}
 
 

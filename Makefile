@@ -3,7 +3,7 @@ CC1=gcc
 
 TARGET = import
 
-SRC = core_ops.c jpeg_ops.c main.c
+SRC = core_ops.c jpeg_ops.c main.c os_api.c
 
 CFLAG = -std=c99 -Wall
 

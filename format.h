@@ -3,12 +3,15 @@
 
 #include "list.h"
 
+#define MAX_NAME 255
+#define MAX_PATH 1024
+
 struct file_format {
 	/* list head shall declair by the 1st member,
 	 * since we don't want to use 'typeof' extended by compiler
 	 */
 	struct list_head head;
-	char *name;
+	char *name; /* string size less than 10 bytes */
 	char *record_filename;
 	struct format_operation *fops;
 };
@@ -18,8 +21,9 @@ struct file_info {
 	 * since we don't want to use 'typeof' extended by compiler
 	 */
 	struct list_head head;
-	char *name;
-	char *copied_fname;
+	char name[MAX_NAME];
+	char copied_fname[MAX_NAME];
+	char format[8];
 	_Bool duplicated;
 };
 

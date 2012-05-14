@@ -7,6 +7,10 @@
         (type *)( (char *)__mptr - offsetof(type,member) );})
 */
 
+#define LIST_HEAD_INIT(name) { &(name), &(name) }
+#define LIST_HEAD(name) \
+	struct list_head name = LIST_HEAD_INIT(name)
+
 #define container_of_first_member(ptr, type, member) ({ \
 		(type *) ( (char *) ptr) ;})
 
