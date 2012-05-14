@@ -3,13 +3,15 @@
 #include <stdbool.h>
 #include <assert.h>
 #include <string.h>
+#include <errno.h>
 
 #include "core_ops.h"
 #include "os_api.h"
 
+struct list_head format_head;
 _Bool core_is_ready = false;
 
-_Bool register_format(struct file_format *format)
+_Bool register_format(struct format *format)
 {
 	assert(format);
 	if (format->name == NULL || format->fops == NULL)
@@ -38,10 +40,10 @@ _Bool scan_dir(char *path, struct list_head *list)
 
 _Bool check_format(char *root, struct list_head *file_head)
 {
-	struct file_format *entry, *next;
+	struct format *entry, *next;
 	char fname[MAX_PATH];
 
-	list_for_each_entry_safe(entry, next, struct file_format, &format_head, head) {
+	list_for_each_entry_safe(entry, next, struct format, &format_head, head) {
 		struct file_info *fentry, *fnext;
 		list_for_each_entry_safe(fentry, fnext, struct file_info, file_head, head) {
 			if (entry->fops->check) {
@@ -54,6 +56,37 @@ _Bool check_format(char *root, struct list_head *file_head)
 			}
 		}
 	}
+	return true;
+}
+
+_Bool save(char *path, struct list_head *file_head)
+{
+	struct file_info *fentry, *fnext;
+	char fname[MAX_PATH];
+	FILE *fp;
+
+	strncpy(fname, path, MAX_PATH);
+	strcat(fname, "/");
+	strcat(fname, RECORD_FILE);
+
+	fp = fopen(fname, "w");
+	if (!fp) {
+		printf("unable to open '%s' (%s)", fname, strerror(errno));
+		return false;
+	}
+
+	list_for_each_entry_safe(fentry, fnext, struct file_info, file_head, head) {
+		if (fentry->format[0] != '\0')
+			fprintf(fp, "%s\t%s\n", fentry->format, fentry->name);
+	}
+
+	fclose(fp);
+	return true;
+}
+
+_Bool load()
+{
+
 	return true;
 }
 

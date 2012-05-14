@@ -2,19 +2,20 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <assert.h>
+#include <string.h>
+#include <errno.h>
 
 #include "core_ops.h"
 #include "os_api.h"
 
-static _Bool jpeg_check(struct file_format*, char *);
+static _Bool jpeg_check(struct format*, char *);
 
 struct format_operation jpeg_fops = {
 	.check	= jpeg_check,
 };
 
-struct file_format jpeg_format = {
+struct format jpeg_format = {
 	.name			= "JPEG",
-	.record_filename	= ".jpeg_index",
 	.fops			= &jpeg_fops,
 };
 
@@ -34,7 +35,7 @@ static void byte_swap(char *ptr, int len)
 #define TIFF_HEADER_OFF		12
 #define EOI			0xffd9
 #define SOI			0xffd8
-static _Bool jpeg_check(struct file_format* format, char *fname)
+static _Bool jpeg_check(struct format* format, char *fname)
 {
         FILE *fp;
         unsigned short maker;
@@ -45,7 +46,7 @@ static _Bool jpeg_check(struct file_format* format, char *fname)
 	assert(fname);
 
         if ((fp = fopen(fname, "r")) == NULL) {
-                perror("fopen");
+		printf("fail to open '%s' (%s)\n", fname, strerror(errno));
 		return false;
         }
         fseek(fp, TIFF_HEADER_OFF, SEEK_SET);

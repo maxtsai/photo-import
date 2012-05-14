@@ -8,11 +8,11 @@
 
 #include "core_ops.h"
 
-#define DEBUG
+#define DEBUG 0
 #if DEBUG
 #define dprintf printf
 #else
-#define dprintf
+#define dprintf(fmt, a...)
 #endif
 
 /* supported format */
@@ -31,7 +31,7 @@ struct _folder_list {
 };
 LIST_HEAD(folder_head);
 
-_Bool prepare()
+static _Bool prepare()
 {
 	prepare_core();
 
@@ -143,6 +143,8 @@ int main(int argc, char **argv)
 			}
 			if (check_format(entry->path, &entry->file_head) == false)
 				printf("some error during check format type\n");
+			if (save(entry->path, &entry->file_head) == false)
+				goto fault;
 		}
 	}
 

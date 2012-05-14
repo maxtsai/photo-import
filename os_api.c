@@ -41,3 +41,4 @@ _Bool get_dir_contents(char *path, struct list_head *contents_head)
 
 	return true;
 }
+

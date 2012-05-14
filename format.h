@@ -6,13 +6,15 @@
 #define MAX_NAME 255
 #define MAX_PATH 1024
 
-struct file_format {
+/* record file name */
+#define RECORD_FILE ".import_index"
+
+struct format {
 	/* list head shall declair by the 1st member,
 	 * since we don't want to use 'typeof' extended by compiler
 	 */
 	struct list_head head;
-	char *name; /* string size less than 10 bytes */
-	char *record_filename;
+	char *name; /* < 8 bytes */
 	struct format_operation *fops;
 };
 
@@ -28,8 +30,8 @@ struct file_info {
 };
 
 struct format_operation {
-	_Bool (*check) (struct file_format*, char *fname);
-	_Bool (*scan) (struct file_format*, char *path, struct list_head *list);
+	_Bool (*check) (struct format*, char *fname);
+	_Bool (*scan) (struct format*, char *path, struct list_head *list);
 };
 
 #endif
