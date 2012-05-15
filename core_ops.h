@@ -6,7 +6,10 @@
 extern struct list_head format_head;
 
 void prepare_core();
+
+/* append all files info after the list argument by link list */
 _Bool scan_dir(char *path, struct list_head *list);
+
 _Bool register_format(struct format *format);
 _Bool check_format(char *, struct list_head *);
 _Bool save(char *, struct list_head *);

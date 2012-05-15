@@ -43,6 +43,9 @@ _Bool check_format(char *root, struct list_head *file_head)
 	struct format *entry, *next;
 	char fname[MAX_PATH];
 
+	assert(root);
+	assert(file_head);
+
 	list_for_each_entry_safe(entry, next, struct format, &format_head, head) {
 		struct file_info *fentry, *fnext;
 		list_for_each_entry_safe(fentry, fnext, struct file_info, file_head, head) {
@@ -51,8 +54,9 @@ _Bool check_format(char *root, struct list_head *file_head)
 				strcat(fname, "/");
 				strncat(fname, fentry->name, MAX_NAME);
 				//printf("%s: check '%s'\n", __FUNCTION__, fname);
-				if (entry->fops->check(entry, fname))
+				if (entry->fops->check(entry, fname)) {
 					strcpy(fentry->format, entry->name);
+				}
 			}
 		}
 	}
@@ -65,6 +69,9 @@ _Bool save(char *path, struct list_head *file_head)
 	char fname[MAX_PATH];
 	FILE *fp;
 
+	assert(path);
+	assert(file_head);
+
 	strncpy(fname, path, MAX_PATH);
 	strcat(fname, "/");
 	strcat(fname, RECORD_FILE);
@@ -76,8 +83,12 @@ _Bool save(char *path, struct list_head *file_head)
 	}
 
 	list_for_each_entry_safe(fentry, fnext, struct file_info, file_head, head) {
-		if (fentry->format[0] != '\0')
-			fprintf(fp, "%s\t%s\n", fentry->format, fentry->name);
+		if (fentry->format[0] != '\0') {
+			if (fentry->copied_fname[0] == '\0')
+				fprintf(fp, "%s\t%s\t%s\n", fentry->format, fentry->name, fentry->name);
+			else
+				fprintf(fp, "%s\t%s\t%s\n", fentry->format, fentry->copied_fname, fentry->name);
+		}
 	}
 
 	fclose(fp);
@@ -89,6 +100,9 @@ _Bool load(char *path, struct list_head *file_head)
 	struct file_info *fentry, *fnext;
 	char fname[MAX_PATH];
 	FILE *fp;
+
+	assert(path);
+	assert(file_head);
 
 	strncpy(fname, path, MAX_PATH);
 	strcat(fname, "/");
@@ -109,8 +123,9 @@ _Bool load(char *path, struct list_head *file_head)
 		struct file_info *fi = malloc(sizeof(struct file_info));
 		errno = 0;
 		fi->copied_fname[0] = '\0';
+		fi->name[0] = '\0';
 		fi->duplicated = false;
-		fscanf(fp, "%s\t%s\n", &fi->format, &fi->name);
+		fscanf(fp, "%s %s %s\n", &fi->format, fi->copied_fname, fi->name);
 		if (errno)
 			printf("load error (%s)\n", strerror(errno));
 		list_add_tail(&fi->head, file_head);

@@ -36,9 +36,11 @@ _Bool get_dir_contents(char *path, struct list_head *contents_head)
 		perror("readdir");
 		list_for_each_entry_safe(entry, next, struct file_info, contents_head, head)
 			list_del(&entry->head);
+		closedir(dir);
 		return false;
 	}
 
+	closedir(dir);
 	return true;
 }
 

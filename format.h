@@ -31,7 +31,7 @@ struct file_info {
 
 struct format_operation {
 	_Bool (*check) (struct format*, char *fname);
-	_Bool (*scan) (struct format*, char *path, struct list_head *list);
+	_Bool (*get_copied_fname) (struct format*, char *fname, char *cfname);
 };
 
 #endif
