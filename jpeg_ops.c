@@ -28,27 +28,53 @@ struct format jpeg_format = {
 	.fops			= &jpeg_fops,
 };
 
+enum {
+	INTEL		= true,
+	MOTOROLA	= false,
+};
+
+#define APP0	0xe0ff
+#define APP1	0xe1ff
+#define APP2	0xe2ff
+
 static inline void byte_swap(unsigned char *ptr, int len)
 {                               
 	unsigned char tmp;
 	assert(ptr);
 	assert((len>0) || (len%2 == 0));
-printf("### [%s:%d]\n", __FUNCTION__, __LINE__);
+printf("[%s:%d] ++\n", __FUNCTION__, __LINE__);
 	for (int i = 0; i < len-1; i+=2) {
 		tmp = ptr[i];
 		ptr[i] = ptr[i+1];
 		ptr[i+1] = tmp;
 	}
-}    
+}
+
+static inline void word_swap(unsigned char *ptr, int len)
+{
+	unsigned char tmp;
+	assert(ptr);
+	assert((len>0) || (len%4 == 0));
+printf("[%s:%d] ++\n", __FUNCTION__, __LINE__);
+	for (int i = 0; i < len-1; i+=4) {
+		tmp = ptr[i];
+		ptr[i] = ptr[i+2];
+		ptr[i+2] = tmp;
+		tmp = ptr[i+1];
+		ptr[i+1] = ptr[i+3];
+		ptr[i+3] = tmp;
+	}
+}
 
 /* simple search */
 _Bool jpeg_get_ifd(char *fname, unsigned short tag, void *content, unsigned short content_len)
 {
 	FILE *fp;
-	_Bool swap = false;
+	_Bool endian = MOTOROLA;
 	unsigned char buf[256];
 	int markers = 0;
 	unsigned short rtag, format, len, offset;
+	unsigned short app;
 	int i;
 
 	assert(content);
@@ -58,43 +84,59 @@ _Bool jpeg_get_ifd(char *fname, unsigned short tag, void *content, unsigned shor
 		printf("%s: %s [%s]\n", __FUNCTION__, strerror(errno), fname);
 		return false;
 	}
+	fseek(fp, 0x2, SEEK_SET);
+	fread(&app, 1, 2, fp);
+	printf("APP = 0x%x\n", app);
+	if (app != APP1) {
+		printf("Not support %s\n", app == APP0 ? "JFIF" : "APP2");
+		goto fault;
+	}
 
 	fseek(fp, 0xc, SEEK_SET);
 	fread(buf, 1, 1, fp);
-	if (buf[0] == 0x4d)
-		swap = true;
-	fseek(fp, 3, SEEK_CUR);
+	if (buf[0] == 0x49)
+		endian = INTEL;
 	printf("byte_align = 0x%c\n", buf[0]);
-	fread(buf, 1, 2, fp);
-	if (swap) byte_swap(buf, 2);
-	for (i = 0; i < 2; i++)
+	fseek(fp, 3, SEEK_CUR);
+	fread(buf, 1, 4, fp);
+	for (i = 0; i < 4; i++)
+		printf("%x ", buf[i]);
+	printf("\n");
+	if (endian == MOTOROLA) {
+		word_swap(buf, 4);
+		byte_swap(buf, 4);
+	}
+	for (i = 0; i < 4; i++)
 		printf("%x ", buf[i]);
 	printf("\n");
 	printf("shift %d bytes\n", (buf[1] << 8) + buf[0]);
 
 	fseek(fp, (buf[1] << 8) + buf[0] - 6, SEEK_CUR);
 	fread(buf, 1, 2, fp);
-	if (swap) byte_swap(buf, 2);
+	if (endian) byte_swap(buf, 2);
 	markers = buf[0] + (buf[1] << 8);
 	printf("markers = %d\n", markers);
 
-	for (int j = 0; j < markers; j++) {
+	//for (int j = 0; j < markers; j++) {
 		fread(&rtag, 1, 2, fp);
-		if (swap) byte_swap((unsigned char*) &rtag, 2);
+		if (endian) byte_swap((unsigned char*) &rtag, 2);
 		fread(&format, 1, 2, fp);
-		if (swap) byte_swap((unsigned char*) &format, 2);
+		if (endian) byte_swap((unsigned char*) &format, 2);
 		fread(&len, 1, 2, fp);
-		if (swap) byte_swap((unsigned char*) &len, 2);
+		if (endian) byte_swap((unsigned char*) &len, 2);
 		fseek(fp, 2, SEEK_CUR);
 		fread(&offset, 1, 2, fp);
-		if (swap) byte_swap((unsigned char*) &offset, 2);
+		if (endian) byte_swap((unsigned char*) &offset, 2);
 		fseek(fp, 2, SEEK_CUR);
 
 		printf("tag, format, len, offset= 0x%x, 0x%x, 0x%x, 0x%x\n", rtag, format, len, offset);
-	}
+	//}
 
 	fclose(fp);
 	return true;
+fault:
+	fclose(fp);
+	return false;
 }
 
 static _Bool jpeg_check(struct format* format, char *fname)
