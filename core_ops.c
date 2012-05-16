@@ -38,6 +38,41 @@ _Bool scan_dir(char *path, struct list_head *list)
 	return get_dir_contents(path, list);
 }
 
+
+static int compare(char *left, char *right, int len)
+{
+	for (int i = 0; i < len; i++) {
+		if (left[i] > right[i])
+			return 1;
+		else if (left[i] < right[i])
+			return -1;
+	}
+	return 0;
+}
+
+static void swap(struct list_head *left, struct list_head *right)
+{
+	struct list_head *tmp;
+
+	if (left->prev != left)
+		left->prev->next = right;
+	if (left->next != left)
+		left->next->prev = right;
+	if (right->prev != right)
+		right->prev->next = left;
+	if (right->next != right)
+		right->next->prev = left;
+
+	if (left->prev != left) {
+	}
+
+}
+
+static void sort(struct list_head *file_head)
+{
+}
+
+
 _Bool check_format(char *root, struct list_head *file_head)
 {
 	struct format *entry, *next;
