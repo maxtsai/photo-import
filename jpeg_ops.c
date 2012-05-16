@@ -8,8 +8,8 @@
 #include "core_ops.h"
 #include "os_api.h"
 
-//#define DEBUG
-#ifdef DEBUG
+#define DEBUG 0
+#if DEBUG
 #define dprintf printf
 #else
 #define dprintf(fmt, a...)
@@ -33,8 +33,8 @@ enum {
 	MOTOROLA	= false,
 };
 
-#define APP0	0xe0ff
-#define APP1	0xe1ff
+#define APP0	0xe0ff /* JFIF */
+#define APP1	0xe1ff /* EXIF */
 #define APP2	0xe2ff
 
 static inline void byte_swap(_Bool endian, unsigned char *ptr, int len)
@@ -171,6 +171,7 @@ fault:
 
 _Bool jpeg_get_copied_fname(struct format *format, char *fname, char *cfname)
 {
+	/* tag = 0x9003 -> Date and Time (Original) */
 	_Bool ret = jpeg_get_ifd(fname, 0x9003, cfname, MAX_NAME);
 	if (ret) {
 		for (int i = 0; (cfname[i] != '\0') && (i < MAX_NAME); i++) {

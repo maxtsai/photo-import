@@ -36,7 +36,7 @@ static _Bool prepare()
 	prepare_core();
 
 	if (!jpeg_init) {
-		printf("Need to support JPEG!\n");
+		printf("Need to support JPEG by default!\n");
 		return false;
 	}
 	if (jpeg_init() == false) {
@@ -127,15 +127,8 @@ static void cleanup()
 	}
 }
 
-//extern _Bool jpeg_get_copied_fname(struct format *format, char *fname, char *cfname);
-
 int main(int argc, char **argv)
 {
-#if 0/* MaxTsai debugs 2012-05-16 */
-	char tmp[MAX_NAME];
-	jpeg_get_copied_fname(NULL, argv[1], tmp);
-	return 0;
-#endif
 	arg_parser(argc, argv);
 
 	if (prepare() == false)
