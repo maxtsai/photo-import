@@ -127,19 +127,20 @@ static void cleanup()
 	}
 }
 
-extern _Bool jpeg_get_ifd(char *fname, unsigned int tag, void *content, int len);
+//extern _Bool jpeg_get_copied_fname(struct format *format, char *fname, char *cfname);
 
 int main(int argc, char **argv)
 {
-	//arg_parser(argc, argv);
+#if 0/* MaxTsai debugs 2012-05-16 */
+	char tmp[MAX_NAME];
+	jpeg_get_copied_fname(NULL, argv[1], tmp);
+	return 0;
+#endif
+	arg_parser(argc, argv);
 
 	if (prepare() == false)
 		exit(1);
 
-#if 1/* MaxTsai debugs 2012-05-15 */
-	unsigned char test[256];
-	jpeg_get_ifd(argv[1], 0x9003, test, sizeof(test));
-#else
 	if (scan_only) {
 		struct _folder_list *entry, *next;	
 		list_for_each_entry_safe(entry, next, struct _folder_list, &folder_head, head) {
@@ -155,7 +156,6 @@ int main(int argc, char **argv)
 				goto fault;
 		}
 	}
-#endif
 fault:
 	cleanup();
 	return 0;

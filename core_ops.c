@@ -56,6 +56,8 @@ _Bool check_format(char *root, struct list_head *file_head)
 				//printf("%s: check '%s'\n", __FUNCTION__, fname);
 				if (entry->fops->check(entry, fname)) {
 					strcpy(fentry->format, entry->name);
+					if (!entry->fops->get_copied_fname(entry, fname, fentry->copied_fname))
+						fentry->copied_fname[0] = '\0';
 				}
 			}
 		}
@@ -85,9 +87,9 @@ _Bool save(char *path, struct list_head *file_head)
 	list_for_each_entry_safe(fentry, fnext, struct file_info, file_head, head) {
 		if (fentry->format[0] != '\0') {
 			if (fentry->copied_fname[0] == '\0')
-				fprintf(fp, "%s\t%s\t%s\n", fentry->format, fentry->name, fentry->name);
+				fprintf(fp, "%s %s %s\n", fentry->format, fentry->name, fentry->name);
 			else
-				fprintf(fp, "%s\t%s\t%s\n", fentry->format, fentry->copied_fname, fentry->name);
+				fprintf(fp, "%s %s %s\n", fentry->format, fentry->copied_fname, fentry->name);
 		}
 	}
 
@@ -125,8 +127,7 @@ _Bool load(char *path, struct list_head *file_head)
 		fi->copied_fname[0] = '\0';
 		fi->name[0] = '\0';
 		fi->duplicated = false;
-		fscanf(fp, "%s %s %s\n", &fi->format, fi->copied_fname, fi->name);
-		if (errno)
+		if ((fscanf(fp, "%s %s %s\n", fi->format, fi->copied_fname, fi->name) == 0) || (errno))
 			printf("load error (%s)\n", strerror(errno));
 		list_add_tail(&fi->head, file_head);
 	}

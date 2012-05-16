@@ -16,7 +16,7 @@
 #endif
 
 static _Bool jpeg_check(struct format*, char *);
-static _Bool jpeg_get_copied_fname (struct format*, char *, char *);
+_Bool jpeg_get_copied_fname (struct format*, char *, char *);
 
 struct format_operation jpeg_fops = {
 	.check	= jpeg_check,
@@ -37,12 +37,13 @@ enum {
 #define APP1	0xe1ff
 #define APP2	0xe2ff
 
-static inline void byte_swap(unsigned char *ptr, int len)
+static inline void byte_swap(_Bool endian, unsigned char *ptr, int len)
 {                               
 	unsigned char tmp;
+	if (endian == INTEL)
+		return;
 	assert(ptr);
 	assert((len>0) || (len%2 == 0));
-printf("[%s:%d] ++\n", __FUNCTION__, __LINE__);
 	for (int i = 0; i < len-1; i+=2) {
 		tmp = ptr[i];
 		ptr[i] = ptr[i+1];
@@ -50,12 +51,13 @@ printf("[%s:%d] ++\n", __FUNCTION__, __LINE__);
 	}
 }
 
-static inline void word_swap(unsigned char *ptr, int len)
+static inline void word_swap(_Bool endian, unsigned char *ptr, int len)
 {
 	unsigned char tmp;
+	if (endian == INTEL)
+		return;
 	assert(ptr);
 	assert((len>0) || (len%4 == 0));
-printf("[%s:%d] ++\n", __FUNCTION__, __LINE__);
 	for (int i = 0; i < len-1; i+=4) {
 		tmp = ptr[i];
 		ptr[i] = ptr[i+2];
@@ -67,15 +69,77 @@ printf("[%s:%d] ++\n", __FUNCTION__, __LINE__);
 }
 
 /* simple search */
+static _Bool exif(FILE *fp, unsigned short tag, void *content, unsigned short content_len, long marker_start_pos)
+{
+	_Bool endian = MOTOROLA;
+	unsigned short rtag, format, markers;
+	unsigned int len, offset;
+	unsigned char buf[16];
+	long pos;
+
+	assert(fp && content);
+	assert((tag > 0) && (content_len > 0));
+
+	fseek(fp, marker_start_pos, SEEK_SET);
+	if (fread(buf, 1, 1, fp) != 1)
+		goto fault;
+	if (buf[0] == 0x49)
+		endian = INTEL;
+	fseek(fp, 7, SEEK_CUR);
+	if (fread(&markers, 1, 2, fp) != 2)
+		goto fault;
+	byte_swap(endian, (unsigned char*) &markers, 2);
+
+	for (int i = 0; i < markers; i++) {
+		if (fread(&rtag, 1, 2, fp) != 2)
+			goto fault;
+		if (fread(&format, 1, 2, fp) != 2)
+			goto fault;
+		if (fread(&len, 1, 4, fp) != 4)
+			goto fault;
+		if (fread(&offset, 1, 4, fp) != 4)
+			goto fault;
+		byte_swap(endian, (unsigned char*) &rtag, 2);
+		byte_swap(endian, (unsigned char*) &format, 2);
+		byte_swap(endian, (unsigned char*) &len, 4);
+		byte_swap(endian, (unsigned char*) &offset, 4);
+		word_swap(endian, (unsigned char*) &len, 4);
+		word_swap(endian, (unsigned char*) &offset, 4);
+
+		dprintf("(tag, format, len, offset) = %x, %x, %x, %x\n", rtag, format, len, offset);
+
+		if (rtag == 0x8769) {
+			unsigned short tmp;
+			fseek(fp, offset + marker_start_pos, SEEK_SET);
+			if (fread(&tmp, 1, 2, fp) != 2)
+				goto fault;
+			byte_swap(endian, (unsigned char*) &tmp, 2);
+			markers += tmp;
+			continue;
+		} else if ((format == 2) && (rtag == tag)) { /* only return ascii string */
+			pos = ftell(fp);
+			fseek(fp, offset + marker_start_pos, SEEK_SET);
+			if (fread(content, 1, len, fp) != len)	
+				goto fault;
+			dprintf("\t content = %s\n", (char *) content);
+			fseek(fp, pos, SEEK_SET);
+		}
+	}
+
+	dprintf("markers = %d\n", markers);
+
+
+	return true;
+fault:
+	return false;
+}
+
 _Bool jpeg_get_ifd(char *fname, unsigned short tag, void *content, unsigned short content_len)
 {
 	FILE *fp;
-	_Bool endian = MOTOROLA;
-	unsigned char buf[256];
-	int markers = 0;
-	unsigned short rtag, format, len, offset;
 	unsigned short app;
-	int i;
+	_Bool ret;
+	long marker_start_pos = 0xc;
 
 	assert(content);
 	assert(content_len > 0 && tag > 0);
@@ -85,58 +149,41 @@ _Bool jpeg_get_ifd(char *fname, unsigned short tag, void *content, unsigned shor
 		return false;
 	}
 	fseek(fp, 0x2, SEEK_SET);
-	fread(&app, 1, 2, fp);
-	printf("APP = 0x%x\n", app);
+	if (fread(&app, 1, 2, fp) != 2)
+		goto fault;
+	if (app == APP0) { /* check if contain EXIF later */
+		fseek(fp, 0x14, SEEK_SET);
+		if (fread(&app, 1, 2, fp) != 2)
+			goto fault;
+		marker_start_pos = 0x1e;
+		dprintf("app = %x\n", app);
+	}
 	if (app != APP1) {
-		printf("Not support %s\n", app == APP0 ? "JFIF" : "APP2");
+		printf("\tNot support %s [%s]\n", app == APP0 ? "JFIF" : "APP2", fname);
 		goto fault;
 	}
-
-	fseek(fp, 0xc, SEEK_SET);
-	fread(buf, 1, 1, fp);
-	if (buf[0] == 0x49)
-		endian = INTEL;
-	printf("byte_align = 0x%c\n", buf[0]);
-	fseek(fp, 3, SEEK_CUR);
-	fread(buf, 1, 4, fp);
-	for (i = 0; i < 4; i++)
-		printf("%x ", buf[i]);
-	printf("\n");
-	if (endian == MOTOROLA) {
-		word_swap(buf, 4);
-		byte_swap(buf, 4);
-	}
-	for (i = 0; i < 4; i++)
-		printf("%x ", buf[i]);
-	printf("\n");
-	printf("shift %d bytes\n", (buf[1] << 8) + buf[0]);
-
-	fseek(fp, (buf[1] << 8) + buf[0] - 6, SEEK_CUR);
-	fread(buf, 1, 2, fp);
-	if (endian) byte_swap(buf, 2);
-	markers = buf[0] + (buf[1] << 8);
-	printf("markers = %d\n", markers);
-
-	//for (int j = 0; j < markers; j++) {
-		fread(&rtag, 1, 2, fp);
-		if (endian) byte_swap((unsigned char*) &rtag, 2);
-		fread(&format, 1, 2, fp);
-		if (endian) byte_swap((unsigned char*) &format, 2);
-		fread(&len, 1, 2, fp);
-		if (endian) byte_swap((unsigned char*) &len, 2);
-		fseek(fp, 2, SEEK_CUR);
-		fread(&offset, 1, 2, fp);
-		if (endian) byte_swap((unsigned char*) &offset, 2);
-		fseek(fp, 2, SEEK_CUR);
-
-		printf("tag, format, len, offset= 0x%x, 0x%x, 0x%x, 0x%x\n", rtag, format, len, offset);
-	//}
+	ret = exif(fp, tag, content, content_len, marker_start_pos);
 
 	fclose(fp);
-	return true;
+	return ret;
 fault:
 	fclose(fp);
 	return false;
+}
+
+_Bool jpeg_get_copied_fname(struct format *format, char *fname, char *cfname)
+{
+	_Bool ret = jpeg_get_ifd(fname, 0x9003, cfname, MAX_NAME);
+	if (ret) {
+		for (int i = 0; (cfname[i] != '\0') && (i < MAX_NAME); i++) {
+			if ((cfname[i] == ' ') || (cfname[i] == ':')) {
+				cfname[i] = '-';
+			}
+		}
+		strcat(cfname, ".jpg");
+		dprintf("\tcfname = '%s' [%s]\n", cfname, fname);
+	}
+	return ret;
 }
 
 static _Bool jpeg_check(struct format* format, char *fname)
@@ -155,18 +202,14 @@ static _Bool jpeg_check(struct format* format, char *fname)
 	dprintf("\tcheck '%s'\n", fname);
 
         fseek(fp, 0, SEEK_SET);
-        if (fread((void*) maker, 1, 2, fp) != 2) {
-		dprintf("\t\t%s:%d, fread error (%s)\n", __FUNCTION__, __LINE__, strerror(errno));
+        if (fread((void*) maker, 1, 2, fp) != 2)
 		goto fault;
-	}
         if ((maker[1] != 0xd8) || (maker[0] != 0xff))
 		goto fault1;
 
         fseek(fp, -2, SEEK_END);
-        if (fread((void*) maker, 1, 2, fp) != 2) {
-		dprintf("\t\t%s:%d, fread error (%s)\n", __FUNCTION__, __LINE__, strerror(errno));
+        if (fread((void*) maker, 1, 2, fp) != 2)
 		goto fault;
-	}
         if ((maker[1] != 0xd9) || (maker[0] != 0xff))
 		goto fault2;
 
@@ -181,11 +224,6 @@ fault:
         return false;
 }
 
-_Bool jpeg_get_copied_fname(struct format *format, char *fname, char *cfname)
-{
-
-	return true;
-}
 
 _Bool jpeg_init()
 {
