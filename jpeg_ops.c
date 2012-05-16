@@ -123,13 +123,11 @@ static _Bool exif(FILE *fp, unsigned short tag, void *content, unsigned short co
 				goto fault;
 			dprintf("\t content = %s\n", (char *) content);
 			fseek(fp, pos, SEEK_SET);
+			return true;
 		}
 	}
 
 	dprintf("markers = %d\n", markers);
-
-
-	return true;
 fault:
 	return false;
 }
@@ -216,7 +214,7 @@ static _Bool jpeg_check(struct format* format, char *fname)
         fclose(fp);
 	return true;
 fault2:
-	printf("\tfile is not complete [%s]\n", fname);
+	printf("\tfile broken? (no EOI) [%s]\n", fname);
 fault1:
 	dprintf("\t\tmaker = 0x%x%x\n", maker[0], maker[1]);
 fault:

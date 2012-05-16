@@ -5,10 +5,34 @@
 #include <errno.h>
 #include <assert.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <time.h>
+
+#include "list.h"
+
+#define NAME_MAX 255
+#define PATH_MAX 1024
 
 #include "format.h"
 #include "os_api.h"
 
+_Bool get_file_time(char *filename, char *time)
+{
+	struct stat sb;
+	struct tm *ft;
+
+	assert(filename && time);
+
+	if (stat(filename, &sb) == -1) {
+		perror("stat");
+		return false;
+	}
+	ft = localtime(&sb.st_mtime);
+	memset(time, 0, 64);
+	strftime(time, 63, "%Y-%m-%d-%H-%M-%S", ft);
+	//printf("%s\n", time);
+	return true;
+}
 _Bool get_dir_contents(char *path, struct list_head *contents_head)
 {
 	struct dirent *de;

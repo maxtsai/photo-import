@@ -91,8 +91,11 @@ _Bool check_format(char *root, struct list_head *file_head)
 				//printf("%s: check '%s'\n", __FUNCTION__, fname);
 				if (entry->fops->check(entry, fname)) {
 					strcpy(fentry->format, entry->name);
-					if (!entry->fops->get_copied_fname(entry, fname, fentry->copied_fname))
-						fentry->copied_fname[0] = '\0';
+					if (!entry->fops->get_copied_fname(entry, fname, fentry->copied_fname)) {
+						//fentry->copied_fname[0] = '\0';
+						get_file_time(fname, fentry->copied_fname);
+						strcat(fentry->copied_fname, ".jpg");
+					}
 				}
 			}
 		}
