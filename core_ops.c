@@ -52,7 +52,7 @@ static int compare(char *left, char *right, int len)
 
 static void swap(struct list_head *left, struct list_head *right)
 {
-	struct list_head *tmp;
+	assert(left && right);
 
 	if (left->prev != left)
 		left->prev->next = right;
@@ -63,9 +63,65 @@ static void swap(struct list_head *left, struct list_head *right)
 	if (right->next != right)
 		right->next->prev = left;
 
-	if (left->prev != left) {
+	if ((left->prev == left) && (right->prev != right)) {
+		left->prev = right->prev;
+		right->prev = right;
+	}
+	if ((left->prev == left) && (right->prev == right)) {
+		printf("\tnodes scatter\n");
+	}
+	if ((left->prev != left) && (right->prev != right)) {
+		struct list_head *tmp = left->prev;
+		left->prev = right->prev;
+		right->prev = tmp;
+	}
+	if ((left->prev != left) && (right->prev == right)) {
+		right->prev = left->prev;
+		left->prev = left;
+	}
+	if ((left->next == left) && (right->next != right)) {
+		left->next = right->next;
+		right->next = right;
+	}
+	if ((left->next == left) && (right->next == right)) {
+		printf("\tnodes scatter\n");
+	}
+	if ((left->next != left) && (right->next != right)) {
+		struct list_head *tmp = left->next;
+		left->next = right->next;
+		right->next = tmp;
+	}
+	if ((left->next != left) && (right->next == right)) {
+		right->next = left->next;
+		left->next = left;
 	}
 
+}
+
+static struct list_head *select_pivot(struct list_head *left, struct list_head *right)
+{
+	int num, i;
+	struct list_head *tmp = NULL;
+
+	assert(left && right);
+	for (num = 0, tmp = left; tmp->next != right; num++, tmp = tmp->next) {}
+	num /= 2;
+	for (i = 0, tmp = left; i < num; i++)
+		tmp = tmp->next;
+	return tmp;
+}
+
+static struct list_head *partition(struct list_head *pivot,
+		struct list_head *left, struct list_head *right)
+{
+	assert(pivot && left && right);
+	if (left->next == right)
+		return;;  
+}
+
+static void my_qsort(struct list_head *p, struct list_head *left, struct list_head *right)
+{
+	assert(p && left && right);
 }
 
 static void sort(struct list_head *file_head)
