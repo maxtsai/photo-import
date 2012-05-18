@@ -39,14 +39,24 @@ _Bool scan_dir(char *path, struct list_head *list)
 }
 
 
-static int compare(char *left, char *right, int len)
+static int compare(struct list_head *left, struct list_head *right)
 {
-	for (int i = 0; i < len; i++) {
-		if (left[i] > right[i])
+	struct file_info *lfi, *rfi;
+	char *l, *r;
+	assert(left && right);
+	lfi = list_entry(left, struct file_info);
+	l = lfi->copied_fname;
+	rfi = list_entry(right, struct file_info);
+	r = rfi->copied_fname;
+
+printf("### [%s:%d]\n", __FUNCTION__, __LINE__);
+	for (int i = 0; i < MAX_NAME; i++) {
+		if (l[i] > r[i])
 			return 1;
-		else if (left[i] < right[i])
+		else if (l[i] < r[i])
 			return -1;
 	}
+printf("### [%s:%d]\n", __FUNCTION__, __LINE__);
 	return 0;
 }
 
@@ -98,36 +108,56 @@ static void swap(struct list_head *left, struct list_head *right)
 
 }
 
-static struct list_head *select_pivot(struct list_head *left, struct list_head *right)
+static struct list_head *partition(struct list_head *left, struct list_head *right)
 {
-	int num, i;
-	struct list_head *tmp = NULL;
-
+	struct list_head *up, *down, *pivot, *tmp;
 	assert(left && right);
-	for (num = 0, tmp = left; tmp->next != right; num++, tmp = tmp->next) {}
-	num /= 2;
-	for (i = 0, tmp = left; i < num; i++)
-		tmp = tmp->next;
-	return tmp;
+	if (left == right) {
+printf("### [%s:%d] left == right = %p\n", __FUNCTION__, __LINE__, left);
+		return NULL;  
+	}
+	pivot = up = left;
+	down = right;
+
+	for(;;) {
+		while(up != right) {
+			if (compare(pivot, up) == -1)
+				break;
+			up = up->next;
+			if (up == down)
+				goto done;
+printf("### [%s:%d]\n", __FUNCTION__, __LINE__);
+		}
+		while(down != left) {
+			if (compare(pivot, down) >= 0)
+				break;
+			down = down->prev;
+			if (up == down)
+				goto done;
+printf("### [%s:%d]\n", __FUNCTION__, __LINE__);
+		}
+		swap(up, down);
+		tmp = up;
+		up = down;
+		down = tmp;
+	}
+done:
+	swap(pivot, down);
+	return pivot;
 }
 
-static struct list_head *partition(struct list_head *pivot,
-		struct list_head *left, struct list_head *right)
+void my_qsort_by_cfname(struct list_head *left, struct list_head *right)
 {
-	assert(pivot && left && right);
-	if (left->next == right)
-		return;;  
+	struct list_head *pivot;
+	static int count = 0;
+	assert(left && right);
+	pivot = partition(left, right);
+	if (pivot == NULL)
+		return;
+printf("### [%s:%d] %d\n", __FUNCTION__, __LINE__, count++);
+	my_qsort_by_cfname(left, pivot);
+	my_qsort_by_cfname(pivot->next, right);
 }
-
-static void my_qsort(struct list_head *p, struct list_head *left, struct list_head *right)
-{
-	assert(p && left && right);
-}
-
-static void sort(struct list_head *file_head)
-{
-}
-
 
 _Bool check_format(char *root, struct list_head *file_head)
 {

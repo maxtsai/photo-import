@@ -11,7 +11,7 @@
 #define LIST_HEAD(name) \
 	struct list_head name = LIST_HEAD_INIT(name)
 
-#define container_of_first_member(ptr, type, member) ({ \
+#define container_of_first_member(ptr, type) ({ \
 		(type *) ( (char *) ptr) ;})
 
 struct list_head {
@@ -68,14 +68,14 @@ static inline int list_empty(const struct list_head *head)
 }
 
 
-#define list_entry(ptr, type, member) \
-	container_of_first_member(ptr, type, member)
+#define list_entry(ptr, type) \
+	container_of_first_member(ptr, type)
 
 #define list_for_each_entry_safe(pos, n, type, head, member)		\
-	for (pos = list_entry((head)->next, type, member),		\
-		n = list_entry(pos->member.next, type, member);		\
+	for (pos = list_entry((head)->next, type),		\
+		n = list_entry(pos->member.next, type);		\
 		&pos->member != (head);					\
-		pos = n, n = list_entry(n->member.next, type, member))
+		pos = n, n = list_entry(n->member.next, type))
 
 /*
 #define list_for_each(pos, head) \

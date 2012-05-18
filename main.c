@@ -127,6 +127,8 @@ static void cleanup()
 	}
 }
 
+extern void my_qsort_by_cfname(struct list_head *left, struct list_head *right);
+
 int main(int argc, char **argv)
 {
 	arg_parser(argc, argv);
@@ -136,6 +138,7 @@ int main(int argc, char **argv)
 
 	if (scan_only) {
 		struct _folder_list *entry, *next;	
+		struct list_head *end;
 		list_for_each_entry_safe(entry, next, struct _folder_list, &folder_head, head) {
 			dprintf("scan '%s'\n", entry->path);
 			if (scan_dir(entry->path, &entry->file_head) == false) {
@@ -143,6 +146,11 @@ int main(int argc, char **argv)
 			}
 			if (check_format(entry->path, &entry->file_head) == false)
 				printf("some error during check format type\n");
+
+			for(end = &entry->file_head; end->next == &entry->file_head; end = end->next) {}
+
+			my_qsort_by_cfname(&entry->file_head, end);
+
 			if (save(entry->path, &entry->file_head) == false)
 				goto fault;
 			if (load(entry->path, &entry->file_head) == false)
