@@ -149,7 +149,7 @@ int main(int argc, char **argv)
 
 			for(end = &entry->file_head; end->next == &entry->file_head; end = end->next) {}
 
-			my_qsort_by_cfname(&entry->file_head, end);
+			my_qsort_by_cfname(&entry->file_head, end->prev);
 
 			if (save(entry->path, &entry->file_head) == false)
 				goto fault;
