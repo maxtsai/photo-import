@@ -117,10 +117,11 @@ static void cleanup()
 		if (!list_empty(&entry->file_head)) {
 			struct file_info *fentry, *fnext;
 			list_for_each_entry_safe(fentry, fnext, struct file_info, &entry->file_head, head) {
-				dprintf("\t\t'%s'\t\t%s\n", fentry->name, fentry->format);
+				dprintf("\t\t'%s'\t\t%s\t\t'%s'\n", fentry->name, fentry->format, fentry->copied_fname);
 				list_del(&fentry->head);
 				free(fentry);
 			}
+			dprintf("\n\n");
 		}
 		list_del(&entry->head);
 		free(entry);
@@ -128,6 +129,8 @@ static void cleanup()
 }
 
 extern void my_qsort_by_cfname(struct list_head *left, struct list_head *right);
+extern char *show_cfname(struct list_head *head);
+extern void swap(struct list_head *left, struct list_head *right);
 
 int main(int argc, char **argv)
 {
@@ -139,6 +142,7 @@ int main(int argc, char **argv)
 	if (scan_only) {
 		struct _folder_list *entry, *next;	
 		struct list_head *end;
+		struct file_info *fentry;
 		list_for_each_entry_safe(entry, next, struct _folder_list, &folder_head, head) {
 			dprintf("scan '%s'\n", entry->path);
 			if (scan_dir(entry->path, &entry->file_head) == false) {
@@ -147,14 +151,40 @@ int main(int argc, char **argv)
 			if (check_format(entry->path, &entry->file_head) == false)
 				printf("some error during check format type\n");
 
-			for(end = &entry->file_head; end->next == &entry->file_head; end = end->next) {}
-
-			my_qsort_by_cfname(&entry->file_head, end->prev);
-
 			if (save(entry->path, &entry->file_head) == false)
 				goto fault;
 			if (load(entry->path, &entry->file_head) == false)
 				goto fault;
+
+			fentry = list_entry(&entry->file_head, struct file_info);
+			printf("\n\n");
+			for(end = &fentry->head; end->next != &fentry->head; end = end->next) {
+				printf("'%s'  ", show_cfname(end));
+			}
+			printf("'%s'", show_cfname(end));
+			printf("\n\n");
+			/*
+			swap(end, fentry->head.next);
+			printf("\n\n");
+			for(end = &fentry->head; end->next != &fentry->head; end = end->next) {
+				printf("'%s'  ", show_cfname(end));
+			}
+			printf("'%s'", show_cfname(end));
+			printf("\n\n");
+			*/
+
+			my_qsort_by_cfname(fentry->head.next, end);
+
+			printf("\n\n");
+			for(end = &fentry->head; end->next != &fentry->head; end = end->next) {
+				printf("'%s'  ", show_cfname(end));
+			}
+			printf("'%s'", show_cfname(end));
+			printf("\n\n");
+
+			if (save(entry->path, &entry->file_head) == false)
+				goto fault;
+
 		}
 	}
 fault:

@@ -66,52 +66,40 @@ static int compare(struct list_head *left, struct list_head *right)
 	return 0;
 }
 
-static void swap(struct list_head *left, struct list_head *right)
+void swap(struct list_head *left, struct list_head *right)
 {
 	assert(left && right);
+	struct list_head *lp, *ln, *rp, *rn;
+	lp = left->prev;
+	ln = left->next;
+	rp = right->prev;
+	rn = right->next;
+	
+	if (lp != left)
+		lp->next = right;
+	if (ln != left)
+		ln->prev = right;
+	if (rp != right)
+		rp->next = left;
+	if (rn != right)
+		rn->prev = left;
 
-	if (left->prev != left)
-		left->prev->next = right;
-	if (left->next != left)
-		left->next->prev = right;
-	if (right->prev != right)
-		right->prev->next = left;
-	if (right->next != right)
-		right->next->prev = left;
-
-	if ((left->prev == left) && (right->prev != right)) {
-		left->prev = right->prev;
-		right->prev = right;
+	if (lp != left)
+		right->prev = lp;
+	if (ln != left) {
+		if (ln == right)
+			right->next = left;
+		else
+			right->next = ln;
 	}
-	if ((left->prev == left) && (right->prev == right)) {
-		printf("\tnodes scatter\n");
+	if (rp != right) {
+		if (rp == left)
+			left->prev = right;
+		else
+			left->prev = rp;
 	}
-	if ((left->prev != left) && (right->prev != right)) {
-		struct list_head *tmp = left->prev;
-		left->prev = right->prev;
-		right->prev = tmp;
-	}
-	if ((left->prev != left) && (right->prev == right)) {
-		right->prev = left->prev;
-		left->prev = left;
-	}
-	if ((left->next == left) && (right->next != right)) {
-		left->next = right->next;
-		right->next = right;
-	}
-	if ((left->next == left) && (right->next == right)) {
-		printf("\tnodes scatter\n");
-	}
-	if ((left->next != left) && (right->next != right)) {
-		struct list_head *tmp = left->next;
-		left->next = right->next;
-		right->next = tmp;
-	}
-	if ((left->next != left) && (right->next == right)) {
-		right->next = left->next;
-		left->next = left;
-	}
-
+	if (rn != right)
+		left->next = rn;
 }
 
 static struct list_head *partition(struct list_head *left, struct list_head *right)
@@ -120,7 +108,7 @@ static struct list_head *partition(struct list_head *left, struct list_head *rig
 	static int limit = 0;
 	int i;
 	assert(left && right);
-	if ((limit++ > 10) || (left == right) || (left->next == right)) {
+	if ((limit++ > 100) || (left == right) || (left->next == right)) {
 		return NULL;  
 	}
 	pivot = up = left;
@@ -144,14 +132,19 @@ static struct list_head *partition(struct list_head *left, struct list_head *rig
 			if (up == down)
 				goto done;
 		}
-
 		swap(up, down);
 		tmp = up;
 		up = down;
 		down = tmp;
 	}
 done:
+	printf("swap '%s' '%s'\n", show_cfname(pivot), show_cfname(down));
 	swap(pivot, down);
+
+	printf("\n\n");
+	for (tmp = left; tmp->next != right; tmp = tmp->next)
+		printf("'%s'\t", show_cfname(tmp));
+	printf("\n\n");
 	return pivot;
 }
 
@@ -159,12 +152,14 @@ void my_qsort_by_cfname(struct list_head *left, struct list_head *right)
 {
 	struct list_head *pivot = NULL;
 	assert(left && right);
-printf("[%s:%d] ++, left, right = %s, %s\n", __FUNCTION__, __LINE__, show_cfname(left), show_cfname(right));
 	pivot = partition(left, right);
 	if (pivot == NULL)
 		return;
 
-printf("[%s:%d] ++, pivot = %s\n", __FUNCTION__, __LINE__, show_cfname(pivot));
+	printf("left, right, pivot = %s, %s, %s\n",
+			show_cfname(left),
+			show_cfname(right),
+			show_cfname(pivot));
 
 	my_qsort_by_cfname(left, pivot->prev);
 	my_qsort_by_cfname(pivot, right);
@@ -190,7 +185,8 @@ _Bool check_format(char *root, struct list_head *file_head)
 					strcpy(fentry->format, entry->name);
 					if (!entry->fops->get_copied_fname(entry, fname, fentry->copied_fname)) {
 						get_file_time(fname, fentry->copied_fname);
-						strcat(fentry->copied_fname, ".jpg");
+						if (memcpy(fentry->format, "JPEG", 4) == 0)
+							strcat(fentry->copied_fname, ".jpg");
 					}
 				}
 			}
